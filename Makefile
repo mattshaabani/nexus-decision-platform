@@ -1,31 +1,33 @@
 .PHONY: setup install test lint typecheck quality-gate docker-up docker-down clean
 
-PYTHON := python3.12
-VENV := .venv
-BIN := $(VENV)/bin
+# Conda environment name (must match environment.yml)
+ENV_NAME := nexus
 
-setup: $(VENV)/bin/activate
+# Use conda run so targets work even if the env is not currently activated
+CONDA_RUN := conda run -n $(ENV_NAME) --no-capture-output
 
-$(VENV)/bin/activate:
-	$(PYTHON) -m venv $(VENV)
-	$(BIN)/pip install --upgrade pip
-	$(BIN)/pip install -e ".[dev]"
-	@echo "\n✅ Environment ready. Activate with: source .venv/bin/activate"
+setup:
+	@echo "Creating / updating conda env '$(ENV_NAME)' from environment.yml ..."
+	conda env create -f environment.yml 2>/dev/null || conda env update -f environment.yml --prune
+	@echo ""
+	@echo "✅ Conda environment ready."
+	@echo "   Activate with:  conda activate $(ENV_NAME)"
+	@echo "   Then run:       make test   /   make quality-gate"
 
 install:
-	$(BIN)/pip install -e ".[dev]"
+	$(CONDA_RUN) pip install -e ".[dev]"
 
 test:
-	$(BIN)/pytest
+	$(CONDA_RUN) pytest
 
 lint:
-	$(BIN)/ruff check src tests scripts
+	$(CONDA_RUN) ruff check src tests scripts
 
 typecheck:
-	$(BIN)/mypy src
+	$(CONDA_RUN) mypy src
 
 quality-gate:
-	$(BIN)/python scripts/quality_gate.py
+	$(CONDA_RUN) python scripts/quality_gate.py
 
 docker-up:
 	docker compose up -d --build
@@ -34,4 +36,5 @@ docker-down:
 	docker compose down
 
 clean:
-	rm -rf $(VENV) .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage dist build *.egg-info
+	conda env remove -n $(ENV_NAME) -y 2>/dev/null || true
+	rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage dist build *.egg-info
