@@ -20,8 +20,8 @@ test:
 
 lint:
 	$(BIN)/ruff check src tests scripts
-	typecheck:
-	typecheck:
+
+typecheck:
 	$(BIN)/mypy src
 
 quality-gate:
