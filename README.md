@@ -21,23 +21,30 @@ Primary beachhead: credit / underwriting decisioning with full model-risk govern
 
 ---
 
-## Quick start
+## Quick start (conda)
 
 ```bash
 # Clone
 git clone https://github.com/mattshaabani/nexus-decision-platform.git
 cd nexus-decision-platform
 
-# Setup (creates venv, installs deps)
+# Create / update the conda environment and install the package
 make setup
+
+# Activate (in your VS Code / terminal)
+conda activate nexus
 
 # Run tests + quality gate
 make test
 make quality-gate
 
-# Local stack (API + monitoring + MLflow + Redis)
-docker compose up -d
+# Optional: local stack (API + Redis + MLflow)
+make docker-up
+# → http://localhost:8000/health
 ```
+
+> `make setup` uses `environment.yml` (Python 3.12).  
+> All other `make` targets call into the `nexus` conda env via `conda run`, so they work even if the env is not currently activated.
 
 ---
 
@@ -71,6 +78,7 @@ nexus-decision-platform/
 ├── tests/
 ├── docker/
 ├── docker-compose.yml
+├── environment.yml           # conda env (Python 3.12)
 ├── pyproject.toml
 └── Makefile
 ```
