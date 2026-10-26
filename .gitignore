@@ -46,6 +46,11 @@ htmlcov/
 .env.*
 !.env.example
 
+# Local env (never commit secrets)
+.env
+.env.local
+.env.*.local
+
 # Data & models (keep only fixtures under tests/)
 data/
 !tests/fixtures/
