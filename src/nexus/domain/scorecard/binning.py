@@ -41,10 +41,13 @@ class BinningResult:
         return out
 
 def _safe_woe(n_good: float, n_bad: float, total_good: float, total_bad: float) -> float:
-    """WoE with Laplace smoothing to avoid log(0)."""
+    """WoE = ln(bad_rate / good_rate) with Laplace smoothing.
+
+    Higher WoE ⇒ more bad-like ⇒ riskier. Positive logistic coefs then make sense.
+    """
     g = (n_good + 0.5) / (total_good + 1.0)
     b = (n_bad + 0.5) / (total_bad + 1.0)
-    return float(np.log(g / b))
+    return float(np.log(b / g))
 
 def fit_woe_bins(
     feature: str,
@@ -126,15 +129,18 @@ def fit_woe_bins(
         else:
             merged.append(dict(p))
 
-    # Enforce monotonic WoE (merge adjacent violations)
-    if monotonic and len(merged) > 1:
+        # Enforce monotonic WoE along bin order (direction = sign of last-first)
+    if monotonic and len(merged) > 2:
+        direction = np.sign(merged[-1]["woe"] - merged[0]["woe"])
+        if direction == 0:
+            direction = 1
         changed = True
         while changed and len(merged) > 1:
             changed = False
             i = 0
             while i < len(merged) - 1:
-                if merged[i]["woe"] > merged[i + 1]["woe"]:
-                    # merge i and i+1
+                diff = merged[i + 1]["woe"] - merged[i]["woe"]
+                if diff * direction < 0:  # violation
                     a, b = merged[i], merged[i + 1]
                     a["hi"] = b["hi"]
                     a["n_g"] += b["n_g"]
@@ -151,7 +157,8 @@ def fit_woe_bins(
     for idx, m in enumerate(merged):
         g_rate = (m["n_g"] + 0.5) / (total_good + 1.0)
         b_rate = (m["n_b"] + 0.5) / (total_bad + 1.0)
-        iv_part = (g_rate - b_rate) * m["woe"]
+        # WoE = ln(b/g) ⇒ IV contribution = (b_rate - g_rate) * WoE
+        iv_part = (b_rate - g_rate) * m["woe"]
         total_iv += iv_part
         bins.append(
             Bin(

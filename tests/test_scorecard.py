@@ -22,7 +22,9 @@ def test_woe_bins_monotonic():
     assert result.iv >= 0
     assert len(result.bins) >= 2
     woes = [b.woe for b in result.bins]
-    assert woes == sorted(woes), "WoE must be monotonic increasing"
+    # monotonic in one direction (no local reversals)
+    diffs = np.diff(woes)
+    assert np.all(diffs >= -1e-9) or np.all(diffs <= 1e-9)
 
 
 def test_fit_scorecard_runs():
