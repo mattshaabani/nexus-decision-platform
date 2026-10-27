@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-
+import os
 import numpy as np
 import pandas as pd
 
@@ -17,6 +17,7 @@ from nexus.domain.quality_gate import evaluate_gate
 from nexus.domain.scorecard import fit_scorecard
 from nexus.domain.fairness import four_fifths_and_eo
 from nexus.domain.model_card import build_model_card, render_model_card_markdown
+from nexus.adapters.mlflow_registry import log_scorecard_run, start_run
 
 
 def make_synthetic(n: int = 3000, seed: int = 42) -> pd.DataFrame:
@@ -131,9 +132,30 @@ def main() -> int:
     card_path = out / "model_card_scorecard-v0.1.0.md"
     card_path.write_text(md, encoding="utf-8")
     print(f"   written → {card_path}")
-    print(md)
-    
-    print(f"8. Sample reason codes: {sample.reason_codes}")
+
+    print("8. Sample reason codes:", sc.score_one(oot.iloc[0]).reason_codes)
+
+    print("9. MLflow logging")
+    tracking = os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000")
+    with start_run(
+        experiment_name="nexus-scorecard",
+        run_name="scorecard-v0.1.0",
+        tracking_uri=tracking,
+    ):
+        run_id = log_scorecard_run(
+            scorecard=sc,
+            metrics=metrics,
+            gate=gate,
+            model_card_markdown=md,
+            params={
+                "n_train": len(train),
+                "n_oot": len(oot),
+                "n_persons_oot": ev.n_persons,
+            },
+            artifact_dir=out,
+        )
+        print(f"   run_id={run_id}")
+        print(f"   tracking={tracking}")
 
     return 0 if gate.passed else 1
 
