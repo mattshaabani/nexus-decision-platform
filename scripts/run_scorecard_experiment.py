@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from nexus.domain.evaluation import evaluate_predictions, out_of_time_split
 from nexus.domain.quality_gate import evaluate_gate
 from nexus.domain.scorecard import fit_scorecard
+from nexus.domain.fairness import four_fifths_and_eo
 
 
 def make_synthetic(n: int = 3000, seed: int = 42) -> pd.DataFrame:
@@ -25,6 +26,7 @@ def make_synthetic(n: int = 3000, seed: int = 42) -> pd.DataFrame:
     age = rng.integers(22, 68, n)
     util = rng.uniform(0, 1, n)  # credit utilisation
     person_id = rng.integers(0, n // 3, n)  # ~3 rows per person
+    protected = rng.integers(0, 2, n)  # binary protected group
 
     logit = (
         -1.8
@@ -43,6 +45,7 @@ def make_synthetic(n: int = 3000, seed: int = 42) -> pd.DataFrame:
             "age": age,
             "utilisation": util,
             "default": y,
+            "protected": protected,
         }
     )
 
@@ -82,13 +85,26 @@ def main() -> int:
     print(f"   Gini={ev.gini:.4f}  Brier={ev.brier:.4f}  n_obs={ev.n_obs}  n_persons={ev.n_persons}")
     print(f"   score range: {scores.min():.1f} – {scores.max():.1f}")
 
-    print("5. Quality gate (first model)")
+    print("5. Fairness (person-level)")
+    fair = four_fifths_and_eo(
+        pids,
+        y_oot,
+        proba,
+        oot["protected"].values,
+        approve_threshold=0.5,
+    )
+    print(
+        f"   four_fifths={fair.four_fifths_ratio:.3f}  eo_gap={fair.eo_gap:.3f}  "
+        f"n_a={fair.n_persons_a} n_b={fair.n_persons_b}"
+    )
+
+    print("6. Quality gate (first model)")
     metrics = {
         "gini": ev.gini,
         "brier": ev.brier,
-        "psi": 0.05,  # synthetic — no drift vs self
-        "four_fifths_ratio": 0.92,  # placeholder until fairness module
-        "eo_gap": 0.02,
+        "psi": 0.05,
+        "four_fifths_ratio": fair.four_fifths_ratio,
+        "eo_gap": fair.eo_gap,
     }
     gate = evaluate_gate("scorecard-v0.1.0", metrics, is_first_model=True)
     print(f"   gate={gate.status.value.upper()}")
@@ -99,9 +115,8 @@ def main() -> int:
         for b in gate.blockers:
             print(f"   blocker: {b}")
 
-    # sample reason codes
     sample = sc.score_one(oot.iloc[0])
-    print(f"6. Sample reason codes: {sample.reason_codes}")
+    print(f"7. Sample reason codes: {sample.reason_codes}")
 
     return 0 if gate.passed else 1
 
