@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -41,7 +41,7 @@ class Decision(BaseModel):
     override: bool = False
     override_by: str | None = None
     override_reason: str | None = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class MetricResult(BaseModel):
@@ -62,7 +62,7 @@ class GateResult(BaseModel):
     model_version: str
     metrics: list[MetricResult]
     blockers: list[str] = Field(default_factory=list)
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @property
     def passed(self) -> bool:
@@ -80,4 +80,4 @@ class ModelCard(BaseModel):
     fairness_summary: dict[str, Any] = Field(default_factory=dict)
     limitations: list[str] = Field(default_factory=list)
     gate_result: GateResult | None = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

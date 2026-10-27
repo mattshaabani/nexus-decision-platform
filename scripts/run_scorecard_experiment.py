@@ -16,6 +16,7 @@ from nexus.domain.evaluation import evaluate_predictions, out_of_time_split
 from nexus.domain.quality_gate import evaluate_gate
 from nexus.domain.scorecard import fit_scorecard
 from nexus.domain.fairness import four_fifths_and_eo
+from nexus.domain.model_card import build_model_card, render_model_card_markdown
 
 
 def make_synthetic(n: int = 3000, seed: int = 42) -> pd.DataFrame:
@@ -116,7 +117,23 @@ def main() -> int:
             print(f"   blocker: {b}")
 
     sample = sc.score_one(oot.iloc[0])
-    print(f"7. Sample reason codes: {sample.reason_codes}")
+    print("7. Model card")
+    card = build_model_card(
+        "scorecard-v0.1.0",
+        gate,
+        training_window="2022-01-01 → 2023-06-30",
+        evaluation_window="2023-08-01 → end",
+        features=features,
+    )
+    md = render_model_card_markdown(card)
+    out = Path("artifacts")
+    out.mkdir(exist_ok=True)
+    card_path = out / "model_card_scorecard-v0.1.0.md"
+    card_path.write_text(md, encoding="utf-8")
+    print(f"   written → {card_path}")
+    print(md)
+    
+    print(f"8. Sample reason codes: {sample.reason_codes}")
 
     return 0 if gate.passed else 1
 
