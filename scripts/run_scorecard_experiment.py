@@ -20,8 +20,10 @@ from nexus.domain.fairness import four_fifths_and_eo
 from nexus.domain.model_card import build_model_card, render_model_card_markdown
 from nexus.domain.models import Decision, DecisionOutcome
 from nexus.domain.monitoring import monitor_scores
-from nexus.domain.quality_gate import evaluate_gate
 from nexus.domain.scorecard import fit_scorecard
+
+from nexus.adapters.champion_store import ChampionStore
+from nexus.application.promote import evaluate_challenger, promote_if_passed
 
 
 def make_synthetic(n: int = 3000, seed: int = 42) -> pd.DataFrame:
@@ -130,7 +132,7 @@ def main() -> int:
         f"n_a={fair.n_persons_a} n_b={fair.n_persons_b}"
     )
 
-    print("6. Quality gate (first model)")
+    print("6. Quality gate (champion–challenger)")
     metrics = {
         "gini": ev.gini,
         "brier": ev.brier,
@@ -138,7 +140,8 @@ def main() -> int:
         "four_fifths_ratio": fair.four_fifths_ratio,
         "eo_gap": fair.eo_gap,
     }
-    gate = evaluate_gate("scorecard-v0.1.0", metrics, is_first_model=True)
+    store = ChampionStore("artifacts/champion.json")
+    gate = evaluate_challenger("scorecard-v0.1.0", metrics, store)
     print(f"   gate={gate.status.value.upper()}")
     for m in gate.metrics:
         flag = "OK" if m.passed else "FAIL"
@@ -146,6 +149,15 @@ def main() -> int:
     if gate.blockers:
         for b in gate.blockers:
             print(f"   blocker: {b}")
+
+    promoted = promote_if_passed(
+        "scorecard-v0.1.0",
+        metrics,
+        gate,
+        store,
+        extra={"n_oot": len(oot)},
+    )
+    print(f"   promoted={promoted}  champion_file=artifacts/champion.json")
 
     print("7. Model card")
     card = build_model_card(
