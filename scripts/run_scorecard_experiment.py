@@ -20,6 +20,7 @@ from nexus.domain.model_card import build_model_card, render_model_card_markdown
 from nexus.adapters.mlflow_registry import log_scorecard_run, start_run
 from nexus.adapters.sqlite_decision_store import SqliteDecisionStore
 from nexus.domain.models import Decision, DecisionOutcome
+from nexus.domain.monitoring import monitor_scores
 
 
 def make_synthetic(n: int = 3000, seed: int = 42) -> pd.DataFrame:
@@ -88,6 +89,29 @@ def main() -> int:
     ev = evaluate_predictions(y_oot, proba, person_ids=pids)
     print(f"   Gini={ev.gini:.4f}  Brier={ev.brier:.4f}  n_obs={ev.n_obs}  n_persons={ev.n_persons}")
     print(f"   score range: {scores.min():.1f} – {scores.max():.1f}")
+
+    print("4b. Monitoring (train scores vs OOT scores)")
+    train_scores = sc.score(train)
+    mon = monitor_scores(
+        baseline_scores=train_scores,
+        live_scores=scores,
+        live_y=y_oot,
+        live_proba=proba,
+        baseline_gini=evaluate_predictions(
+            train["default"].values, sc.predict_proba(train)
+        ).gini,
+        psi_threshold=0.20,
+        gini_drop_max=0.08,
+    )
+    print(
+        f"   PSI={mon.psi_score:.4f}  gini_live={mon.gini_live:.4f}  "
+        f"gini_base={mon.gini_baseline:.4f}"
+    )
+    if mon.alerts:
+        for a in mon.alerts:
+            print(f"   ALERT: {a}")
+    else:
+        print("   no alerts")
 
     print("5. Fairness (person-level)")
     fair = four_fifths_and_eo(
