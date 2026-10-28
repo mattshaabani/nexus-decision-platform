@@ -9,20 +9,20 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
-class DecisionOutcome(str, StrEnum):
+class DecisionOutcome(StrEnum):
     APPROVE = "approve"
     REFER = "refer"
     DECLINE = "decline"
 
 
-class ModelStatus(str, StrEnum):
+class ModelStatus(StrEnum):
     CANDIDATE = "candidate"
     CHAMPION = "champion"
     RETIRED = "retired"
     REJECTED = "rejected"
 
 
-class GateStatus(str, StrEnum):
+class GateStatus(StrEnum):
     PASS = "pass"
     FAIL = "fail"
 
