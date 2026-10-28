@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from nexus.domain.models import Decision, DecisionOutcome
@@ -68,7 +68,7 @@ class SqliteDecisionStore:
                     1 if decision.override else 0,
                     decision.override_by,
                     decision.override_reason,
-                    decision.created_at.astimezone(timezone.utc).isoformat(),
+                    decision.created_at.astimezone(UTC).isoformat(),
                 ),
             )
             conn.commit()

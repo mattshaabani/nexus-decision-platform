@@ -10,6 +10,7 @@ from sklearn.linear_model import LogisticRegression
 
 from nexus.domain.scorecard.binning import BinningResult, fit_woe_bins
 
+
 @dataclass(frozen=True)
 class ScorecardResult:
     """One scored observation."""
@@ -125,8 +126,11 @@ def fit_scorecard(
 
     raw_coef = clf.coef_.ravel()
     # Enforce ≥ 0 (if a coef went negative, clip to 0 — feature drops out)
-    coefs = {f: float(max(0.0, c)) for f, c in zip(features, raw_coef)}
+    coefs = {
+        f: float(max(0.0, c)) for f, c in zip(features, raw_coef, strict=True)
+    }
 
+    
     return Scorecard(
         features=tuple(features),
         binnings=binnings,

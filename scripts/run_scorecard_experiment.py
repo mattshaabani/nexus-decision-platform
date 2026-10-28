@@ -3,24 +3,25 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
-import os
+
 import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from nexus.domain.evaluation import evaluate_predictions, out_of_time_split
-from nexus.domain.quality_gate import evaluate_gate
-from nexus.domain.scorecard import fit_scorecard
-from nexus.domain.fairness import four_fifths_and_eo
-from nexus.domain.model_card import build_model_card, render_model_card_markdown
 from nexus.adapters.mlflow_registry import log_scorecard_run, start_run
 from nexus.adapters.sqlite_decision_store import SqliteDecisionStore
+from nexus.domain.evaluation import evaluate_predictions, out_of_time_split
+from nexus.domain.fairness import four_fifths_and_eo
+from nexus.domain.model_card import build_model_card, render_model_card_markdown
 from nexus.domain.models import Decision, DecisionOutcome
 from nexus.domain.monitoring import monitor_scores
+from nexus.domain.quality_gate import evaluate_gate
+from nexus.domain.scorecard import fit_scorecard
 
 
 def make_synthetic(n: int = 3000, seed: int = 42) -> pd.DataFrame:
@@ -87,7 +88,10 @@ def main() -> int:
     pids = oot["person_id"].values
 
     ev = evaluate_predictions(y_oot, proba, person_ids=pids)
-    print(f"   Gini={ev.gini:.4f}  Brier={ev.brier:.4f}  n_obs={ev.n_obs}  n_persons={ev.n_persons}")
+    print(
+        f"   Gini={ev.gini:.4f}  Brier={ev.brier:.4f}  "
+        f"n_obs={ev.n_obs}  n_persons={ev.n_persons}"
+    )
     print(f"   score range: {scores.min():.1f} – {scores.max():.1f}")
 
     print("4b. Monitoring (train scores vs OOT scores)")
@@ -143,7 +147,6 @@ def main() -> int:
         for b in gate.blockers:
             print(f"   blocker: {b}")
 
-    sample = sc.score_one(oot.iloc[0])
     print("7. Model card")
     card = build_model_card(
         "scorecard-v0.1.0",
@@ -181,7 +184,7 @@ def main() -> int:
                 features={f: float(row[f]) for f in features},
             )
         )
-    print(f"   stored 20 decisions → artifacts/decisions.db")
+    print("   stored 20 decisions → artifacts/decisions.db")
 
     print("9. MLflow logging")
     tracking = os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000")

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from nexus.domain.models import GateResult, GateStatus, MetricResult
 
-
 # Default thresholds – override via config in adapters / scripts
 DEFAULT_THRESHOLDS = {
     "gini_floor": 0.35,

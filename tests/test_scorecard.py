@@ -2,9 +2,9 @@
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from nexus.domain.scorecard import fit_scorecard, fit_woe_bins
+
 
 def _synthetic_data(n: int = 500, seed: int = 42) -> pd.DataFrame:
     rng = np.random.default_rng(seed)

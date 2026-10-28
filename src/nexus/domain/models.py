@@ -2,27 +2,27 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class DecisionOutcome(str, Enum):
+class DecisionOutcome(str, StrEnum):
     APPROVE = "approve"
     REFER = "refer"
     DECLINE = "decline"
 
 
-class ModelStatus(str, Enum):
+class ModelStatus(str, StrEnum):
     CANDIDATE = "candidate"
     CHAMPION = "champion"
     RETIRED = "retired"
     REJECTED = "rejected"
 
 
-class GateStatus(str, Enum):
+class GateStatus(str, StrEnum):
     PASS = "pass"
     FAIL = "fail"
 
@@ -41,7 +41,7 @@ class Decision(BaseModel):
     override: bool = False
     override_by: str | None = None
     override_reason: str | None = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class MetricResult(BaseModel):
@@ -62,7 +62,7 @@ class GateResult(BaseModel):
     model_version: str
     metrics: list[MetricResult]
     blockers: list[str] = Field(default_factory=list)
-    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def passed(self) -> bool:
@@ -80,4 +80,4 @@ class ModelCard(BaseModel):
     fairness_summary: dict[str, Any] = Field(default_factory=dict)
     limitations: list[str] = Field(default_factory=list)
     gate_result: GateResult | None = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

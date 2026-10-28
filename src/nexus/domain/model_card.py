@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from nexus.domain.models import GateResult, MetricResult, ModelCard, ModelStatus
+from nexus.domain.models import GateResult, ModelCard, ModelStatus
 
 
 def build_model_card(
@@ -44,7 +44,7 @@ def build_model_card(
         fairness_summary=fairness_summary,
         limitations=limitations,
         gate_result=gate,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
 

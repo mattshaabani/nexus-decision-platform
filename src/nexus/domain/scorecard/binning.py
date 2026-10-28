@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+
 @dataclass(frozen=True)
 class Bin:
     """One bin for a single feature."""

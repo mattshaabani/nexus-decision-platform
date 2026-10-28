@@ -83,10 +83,11 @@ def four_fifths_and_eo(
     rate_a, tpr_a, n_a = _rates(mask_a)
     rate_b, tpr_b, n_b = _rates(mask_b)
 
-    if max(rate_a, rate_b) < 1e-9:
-        ratio = 1.0
-    else:
-        ratio = min(rate_a, rate_b) / max(rate_a, rate_b)
+    ratio = (
+        1.0
+        if max(rate_a, rate_b) < 1e-9
+        else min(rate_a, rate_b) / max(rate_a, rate_b)
+    )
 
     return FairnessResult(
         four_fifths_ratio=float(ratio),
