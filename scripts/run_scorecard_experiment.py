@@ -18,6 +18,8 @@ from nexus.domain.scorecard import fit_scorecard
 from nexus.domain.fairness import four_fifths_and_eo
 from nexus.domain.model_card import build_model_card, render_model_card_markdown
 from nexus.adapters.mlflow_registry import log_scorecard_run, start_run
+from nexus.adapters.sqlite_decision_store import SqliteDecisionStore
+from nexus.domain.models import Decision, DecisionOutcome
 
 
 def make_synthetic(n: int = 3000, seed: int = 42) -> pd.DataFrame:
@@ -134,6 +136,28 @@ def main() -> int:
     print(f"   written → {card_path}")
 
     print("8. Sample reason codes:", sc.score_one(oot.iloc[0]).reason_codes)
+    print("8b. Audit log (sample 20 OOT decisions)")
+    store = SqliteDecisionStore("artifacts/decisions.db")
+    for i, (_, row) in enumerate(oot.head(20).iterrows()):
+        result = sc.score_one(row)
+        outcome = (
+            DecisionOutcome.APPROVE
+            if result.probability < 0.5
+            else DecisionOutcome.DECLINE
+        )
+        store.save(
+            Decision(
+                decision_id=f"oot-{i}",
+                person_id=str(row["person_id"]),
+                model_version="scorecard-v0.1.0",
+                score=result.score,
+                probability=result.probability,
+                outcome=outcome,
+                reason_codes=list(result.reason_codes),
+                features={f: float(row[f]) for f in features},
+            )
+        )
+    print(f"   stored 20 decisions → artifacts/decisions.db")
 
     print("9. MLflow logging")
     tracking = os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000")
