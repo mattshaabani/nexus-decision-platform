@@ -134,7 +134,7 @@ def main() -> int:
     metrics = {
         "gini": ev.gini,
         "brier": ev.brier,
-        "psi": 0.05,
+        "psi": mon.psi_score,
         "four_fifths_ratio": fair.four_fifths_ratio,
         "eo_gap": fair.eo_gap,
     }
