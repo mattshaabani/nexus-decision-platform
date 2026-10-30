@@ -24,6 +24,7 @@ from nexus.domain.scorecard import fit_scorecard
 
 from nexus.adapters.champion_store import ChampionStore
 from nexus.application.promote import evaluate_challenger, promote_if_passed
+from nexus.adapters.config_loader import load_gate_thresholds
 
 
 def make_synthetic(n: int = 3000, seed: int = 42) -> pd.DataFrame:
@@ -140,8 +141,10 @@ def main() -> int:
         "four_fifths_ratio": fair.four_fifths_ratio,
         "eo_gap": fair.eo_gap,
     }
+    thresholds = load_gate_thresholds()
     store = ChampionStore("artifacts/champion.json")
-    gate = evaluate_challenger("scorecard-v0.1.0", metrics, store)
+    gate = evaluate_challenger(
+        "scorecard-v0.1.0", metrics, store, thresholds=thresholds)
     print(f"   gate={gate.status.value.upper()}")
     for m in gate.metrics:
         flag = "OK" if m.passed else "FAIL"
