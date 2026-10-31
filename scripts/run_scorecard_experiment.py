@@ -9,6 +9,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pickle
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -176,6 +177,13 @@ def main() -> int:
     card_path = out / "model_card_scorecard-v0.1.0.md"
     card_path.write_text(md, encoding="utf-8")
     print(f"   written → {card_path}")
+
+    import pickle
+
+    pkl_path = out / "scorecard_scorecard-v0.1.0.pkl"
+    with open(pkl_path, "wb") as f:
+        pickle.dump(sc, f)
+    print(f"   scorecard pickle → {pkl_path}")
 
     print("8. Sample reason codes:", sc.score_one(oot.iloc[0]).reason_codes)
     print("8b. Audit log (sample 20 OOT decisions)")
