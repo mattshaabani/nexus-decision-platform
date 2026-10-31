@@ -60,9 +60,10 @@ def make_synthetic(n: int = 3000, seed: int = 42) -> pd.DataFrame:
     )
 
 
+seed = 42
 def main() -> int:
     print("1. Generate synthetic data")
-    df = make_synthetic()
+    df = make_synthetic(seed=seed)
 
     print("2. OOT split (train ≤ 2023-06, OOT ≥ 2023-08 — embargo July)")
     train, oot = out_of_time_split(
@@ -225,6 +226,12 @@ def main() -> int:
                 "n_train": len(train),
                 "n_oot": len(oot),
                 "n_persons_oot": ev.n_persons,
+                "seed": seed,
+                "n_rows_total": len(df),
+                "feature_list": ",".join(features),
+                "model_version": "scorecard-v0.1.0",
+                "gate_status": gate.status.value,
+                "promoted": str(promoted),
             },
             artifact_dir=out,
         )

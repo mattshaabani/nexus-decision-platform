@@ -12,6 +12,7 @@ from nexus import __version__
 from nexus.adapters.sqlite_decision_store import SqliteDecisionStore
 from nexus.application.scoring import score_application
 from nexus.domain.scorecard.scorecard import Scorecard
+from nexus.adapters.champion_store import ChampionStore
 
 app = FastAPI(
     title="Nexus Decision Platform",
@@ -22,6 +23,7 @@ app = FastAPI(
 SCORECARD_PATH = Path("artifacts/scorecard_scorecard-v0.1.0.pkl")
 MODEL_VERSION = "scorecard-v0.1.0"
 _store = SqliteDecisionStore("artifacts/decisions.db")
+_champion_store = ChampionStore("artifacts/champion.json")
 _scorecard: Scorecard | None = None
 
 
@@ -59,6 +61,14 @@ class ScoreResponse(BaseModel):
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "version": __version__}
+
+
+@app.get("/champion")
+def get_champion() -> dict:
+    data = _champion_store.get()
+    if data is None:
+        raise HTTPException(status_code=404, detail="No champion registered yet")
+    return data
 
 
 @app.get("/")
