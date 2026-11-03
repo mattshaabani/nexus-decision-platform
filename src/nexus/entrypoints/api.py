@@ -80,6 +80,25 @@ def root() -> dict[str, str]:
     }
 
 
+@app.get("/decisions/{decision_id}")
+def get_decision(decision_id: str) -> dict:
+    decision = _store.get(decision_id)
+    if decision is None:
+        raise HTTPException(status_code=404, detail="Decision not found")
+    return {
+        "decision_id": decision.decision_id,
+        "person_id": decision.person_id,
+        "model_version": decision.model_version,
+        "score": decision.score,
+        "probability": decision.probability,
+        "outcome": decision.outcome.value,
+        "reason_codes": list(decision.reason_codes),
+        "features": decision.features,
+        "override": decision.override,
+        "created_at": decision.created_at.isoformat(),
+    }
+
+
 @app.post("/score", response_model=ScoreResponse)
 def score(req: ScoreRequest) -> ScoreResponse:
     sc = _load_scorecard()
