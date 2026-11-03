@@ -122,6 +122,17 @@ def main() -> int:
     else:
         print("   no alerts")
 
+
+    print("4c. Retrain policy")
+    from nexus.domain.retrain_policy import evaluate_retrain_triggers
+
+    retrain = evaluate_retrain_triggers(
+        mon, psi_trigger=0.20, gini_drop_trigger=0.08
+    )
+    print(f"   should_retrain={retrain.should_retrain}")
+    for r in retrain.reasons:
+        print(f"   reason: {r}")
+
     print("5. Fairness (person-level)")
     fair = four_fifths_and_eo(
         pids,
