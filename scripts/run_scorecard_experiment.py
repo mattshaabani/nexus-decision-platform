@@ -114,7 +114,7 @@ def main() -> int:
     )
     print(
         f"   PSI={mon.psi_score:.4f}  gini_live={mon.gini_live:.4f}  "
-        f"gini_base={mon.gini_baseline:.4f}"
+        f"gini_base={mon.gini_baseline:.4f}   ECE={mon.ece:.4f}"
     )
     if mon.alerts:
         for a in mon.alerts:

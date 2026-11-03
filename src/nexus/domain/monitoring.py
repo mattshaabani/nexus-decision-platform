@@ -17,7 +17,44 @@ class MonitoringReport:
     gini_baseline: float | None
     n_live: int
     alerts: tuple[str, ...]
+    ece: float = 0.0
+    csi_mean: float = 0.0
 
+
+def expected_calibration_error(
+    y_true: np.ndarray,
+    y_prob: np.ndarray,
+    n_bins: int = 10,
+) -> float:
+    """ECE: weighted |accuracy - confidence| across probability bins."""
+    y_true = np.asarray(y_true, dtype=float).ravel()
+    y_prob = np.asarray(y_prob, dtype=float).ravel()
+    edges = np.linspace(0.0, 1.0, n_bins + 1)
+    ece = 0.0
+    n = len(y_true)
+    if n == 0:
+        return 0.0
+    for i in range(n_bins):
+        lo, hi = edges[i], edges[i + 1]
+        if i == n_bins - 1:
+            mask = (y_prob >= lo) & (y_prob <= hi)
+        else:
+            mask = (y_prob >= lo) & (y_prob < hi)
+        if not np.any(mask):
+            continue
+        conf = float(y_prob[mask].mean())
+        acc = float(y_true[mask].mean())
+        ece += (mask.sum() / n) * abs(acc - conf)
+    return float(ece)
+
+
+def characteristic_stability_index(
+    baseline: np.ndarray,
+    live: np.ndarray,
+    n_bins: int = 10,
+) -> float:
+    """CSI for one numeric feature (same formula family as PSI)."""
+    return psi(baseline, live, n_bins=n_bins)
 
 def monitor_scores(
     *,
@@ -44,9 +81,12 @@ def monitor_scores(
 
     gini_live = 0.0
     brier_live = 0.0
+    ece = 0.0
+
     if live_y is not None and live_proba is not None:
         gini_live = gini_coefficient(live_y, live_proba)
         brier_live = brier_score(live_y, live_proba)
+        ece = expected_calibration_error(live_y, live_proba)
         if baseline_gini is not None and (baseline_gini - gini_live) > gini_drop_max:
             alerts.append(
                 f"Gini drop {baseline_gini - gini_live:.4f} > {gini_drop_max} "
@@ -60,4 +100,6 @@ def monitor_scores(
         gini_baseline=baseline_gini,
         n_live=int(len(live_scores)),
         alerts=tuple(alerts),
+        ece=float(ece),
+        csi_mean=0.0,
     )
