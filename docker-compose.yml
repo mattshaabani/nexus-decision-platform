@@ -50,6 +50,22 @@ services:
       - mlflow-data:/mlflow
     restart: unless-stopped
 
+  demo-seed:
+    profiles: ["demo"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    depends_on:
+      - mlflow
+    command: python scripts/run_investor_demo.py
+
 volumes:
   redis-data:
   mlflow-data:
+
+
