@@ -16,6 +16,9 @@ from nexus.adapters.champion_store import ChampionStore
 from nexus.adapters.llm_echo import EchoLLM, InMemoryCache
 from nexus.domain.llm_gateway import LLMMessage, LLMRequest
 from nexus.adapters.policy_retriever import MarkdownPolicyRetriever
+import uuid
+from nexus.adapters.sqlite_agent_audit import SqliteAgentAuditStore
+
 
 app = FastAPI(
     title="Nexus Decision Platform",
@@ -28,6 +31,7 @@ MODEL_VERSION = "scorecard-v0.1.0"
 _store = SqliteDecisionStore("artifacts/decisions.db")
 _llm_cache = InMemoryCache()
 _llm = EchoLLM(_llm_cache)
+_agent_audit = SqliteAgentAuditStore("artifacts/agent_audit.db")
 _retriever = MarkdownPolicyRetriever("data/policy")
 _champion_store = ChampionStore("artifacts/champion.json")
 _scorecard: Scorecard | None = None
@@ -178,6 +182,29 @@ def support_explain(req: ExplainRequest) -> dict:
         model_hint="cheap",
     )
     resp = _llm.complete(llm_req)
+
+    prompt_text = f"{req.question}\n{context}\n{policy_block}"
+    _agent_audit.log_turn(
+        turn_id=str(uuid.uuid4()),
+        decision_id=decision.decision_id,
+        endpoint="/support/explain",
+        prompt_text=prompt_text,
+        tools=["get_decision", "policy_retrieve", "llm_complete"],
+        citations=[
+            {
+                "chunk_id": h.chunk.chunk_id,
+                "title": h.chunk.title,
+                "source": h.chunk.source,
+                "score": h.score,
+            }
+            for h in hits
+        ],
+        model=resp.model,
+        cached=resp.cached,
+        cost_usd=resp.cost_usd,
+        latency_ms=resp.latency_ms,
+    )
+    
     return {
         "decision_id": decision.decision_id,
         "outcome": decision.outcome.value,
