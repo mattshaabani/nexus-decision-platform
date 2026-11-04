@@ -15,6 +15,7 @@ from nexus.domain.scorecard.scorecard import Scorecard
 from nexus.adapters.champion_store import ChampionStore
 from nexus.adapters.llm_echo import EchoLLM, InMemoryCache
 from nexus.domain.llm_gateway import LLMMessage, LLMRequest
+from nexus.adapters.policy_retriever import MarkdownPolicyRetriever
 
 app = FastAPI(
     title="Nexus Decision Platform",
@@ -27,6 +28,7 @@ MODEL_VERSION = "scorecard-v0.1.0"
 _store = SqliteDecisionStore("artifacts/decisions.db")
 _llm_cache = InMemoryCache()
 _llm = EchoLLM(_llm_cache)
+_retriever = MarkdownPolicyRetriever("data/policy")
 _champion_store = ChampionStore("artifacts/champion.json")
 _scorecard: Scorecard | None = None
 
@@ -145,18 +147,32 @@ def support_explain(req: ExplainRequest) -> dict:
         f"score={decision.score:.1f} probability={decision.probability:.4f} "
         f"reason_codes={list(decision.reason_codes)} features={decision.features}"
     )
+    hits = _retriever.retrieve(
+        f"{req.question} {' '.join(decision.reason_codes)}",
+        top_k=3,
+    )
+    policy_block = "\n\n".join(
+        f"[{h.chunk.chunk_id}] {h.chunk.title}: {h.chunk.text[:400]}"
+        for h in hits
+    ) or "(no policy chunks retrieved)"
+
     llm_req = LLMRequest(
         messages=(
             LLMMessage(
                 role="system",
                 content=(
-                    "You are a support assistant. You explain existing credit decisions. "
-                    "You must not approve, decline, or change any decision."
+                    "You are a support assistant. Explain existing credit decisions "
+                    "using only the provided decision context and policy chunks. "
+                    "You must not approve, decline, or change any decision. "
+                    "Cite chunk ids when you use policy text."
                 ),
             ),
             LLMMessage(
                 role="user",
-                content=f"{req.question}\n\nDecision context:\n{context}",
+                content=(
+                    f"{req.question}\n\nDecision context:\n{context}\n\n"
+                    f"Policy chunks:\n{policy_block}"
+                ),
             ),
         ),
         model_hint="cheap",
@@ -166,8 +182,17 @@ def support_explain(req: ExplainRequest) -> dict:
         "decision_id": decision.decision_id,
         "outcome": decision.outcome.value,
         "explanation": resp.content,
+        "citations": [
+            {
+                "chunk_id": h.chunk.chunk_id,
+                "title": h.chunk.title,
+                "source": h.chunk.source,
+                "score": h.score,
+            }
+            for h in hits
+        ],
         "model": resp.model,
         "cached": resp.cached,
         "cost_usd": resp.cost_usd,
-        "grounding": "echo-adapter-v1",
+        "grounding": "policy-rag+echo-v1",
     }
