@@ -72,3 +72,17 @@ class EchoLLM:
         if self.cache is not None:
             self.cache.set(key, resp)
         return resp
+
+
+
+def build_default_llm(cache: SemanticCachePort | None = None) -> LLMPort:
+    """Prefer OpenAI-compatible if NEXUS_LLM_API_KEY is set; else echo."""
+    try:
+        from nexus.adapters.llm_openai import OpenAICompatibleLLM
+
+        real = OpenAICompatibleLLM(cache)
+        if real.available:
+            return real
+    except Exception:
+        pass
+    return EchoLLM(cache)

@@ -18,6 +18,7 @@ from nexus.domain.llm_gateway import LLMMessage, LLMRequest
 from nexus.adapters.policy_retriever import MarkdownPolicyRetriever
 import uuid
 from nexus.adapters.sqlite_agent_audit import SqliteAgentAuditStore
+from nexus.adapters.llm_echo import InMemoryCache, build_default_llm
 
 
 app = FastAPI(
@@ -30,7 +31,7 @@ SCORECARD_PATH = Path("artifacts/scorecard_scorecard-v0.1.0.pkl")
 MODEL_VERSION = "scorecard-v0.1.0"
 _store = SqliteDecisionStore("artifacts/decisions.db")
 _llm_cache = InMemoryCache()
-_llm = EchoLLM(_llm_cache)
+_llm = build_default_llm(_llm_cache)
 _agent_audit = SqliteAgentAuditStore("artifacts/agent_audit.db")
 _retriever = MarkdownPolicyRetriever("data/policy")
 _champion_store = ChampionStore("artifacts/champion.json")
@@ -204,7 +205,7 @@ def support_explain(req: ExplainRequest) -> dict:
         cost_usd=resp.cost_usd,
         latency_ms=resp.latency_ms,
     )
-    
+
     return {
         "decision_id": decision.decision_id,
         "outcome": decision.outcome.value,
