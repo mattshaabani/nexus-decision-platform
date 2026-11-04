@@ -13,6 +13,8 @@ from nexus.adapters.sqlite_decision_store import SqliteDecisionStore
 from nexus.application.scoring import score_application
 from nexus.domain.scorecard.scorecard import Scorecard
 from nexus.adapters.champion_store import ChampionStore
+from nexus.adapters.llm_echo import EchoLLM, InMemoryCache
+from nexus.domain.llm_gateway import LLMMessage, LLMRequest
 
 app = FastAPI(
     title="Nexus Decision Platform",
@@ -23,6 +25,8 @@ app = FastAPI(
 SCORECARD_PATH = Path("artifacts/scorecard_scorecard-v0.1.0.pkl")
 MODEL_VERSION = "scorecard-v0.1.0"
 _store = SqliteDecisionStore("artifacts/decisions.db")
+_llm_cache = InMemoryCache()
+_llm = EchoLLM(_llm_cache)
 _champion_store = ChampionStore("artifacts/champion.json")
 _scorecard: Scorecard | None = None
 
@@ -122,3 +126,48 @@ def score(req: ScoreRequest) -> ScoreResponse:
         outcome=decision.outcome.value,
         reason_codes=list(decision.reason_codes),
     )
+
+
+class ExplainRequest(BaseModel):
+    decision_id: str
+    question: str = "Why was this decision made?"
+
+
+@app.post("/support/explain")
+def support_explain(req: ExplainRequest) -> dict:
+    """Subordinate explanation — never changes the decision outcome."""
+    decision = _store.get(req.decision_id)
+    if decision is None:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    context = (
+        f"decision_id={decision.decision_id} outcome={decision.outcome.value} "
+        f"score={decision.score:.1f} probability={decision.probability:.4f} "
+        f"reason_codes={list(decision.reason_codes)} features={decision.features}"
+    )
+    llm_req = LLMRequest(
+        messages=(
+            LLMMessage(
+                role="system",
+                content=(
+                    "You are a support assistant. You explain existing credit decisions. "
+                    "You must not approve, decline, or change any decision."
+                ),
+            ),
+            LLMMessage(
+                role="user",
+                content=f"{req.question}\n\nDecision context:\n{context}",
+            ),
+        ),
+        model_hint="cheap",
+    )
+    resp = _llm.complete(llm_req)
+    return {
+        "decision_id": decision.decision_id,
+        "outcome": decision.outcome.value,
+        "explanation": resp.content,
+        "model": resp.model,
+        "cached": resp.cached,
+        "cost_usd": resp.cost_usd,
+        "grounding": "echo-adapter-v1",
+    }
