@@ -7,7 +7,6 @@ import time
 from typing import Any
 
 from nexus.domain.llm_gateway import (
-    LLMPort,
     LLMRequest,
     LLMResponse,
     SemanticCachePort,

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from nexus.domain.rag import PolicyChunk, PolicyRetrieverPort, RetrievalHit
+from nexus.domain.rag import PolicyChunk, RetrievalHit
 
 
 def _tokenize(text: str) -> set[str]:

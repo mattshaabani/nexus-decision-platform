@@ -4,28 +4,27 @@
 from __future__ import annotations
 
 import os
+import pickle
 import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pickle
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from nexus.adapters.champion_store import ChampionStore
+from nexus.adapters.config_loader import load_gate_thresholds
 from nexus.adapters.mlflow_registry import log_scorecard_run, start_run
 from nexus.adapters.sqlite_decision_store import SqliteDecisionStore
+from nexus.application.promote import evaluate_challenger, promote_if_passed
 from nexus.domain.evaluation import evaluate_predictions, out_of_time_split
 from nexus.domain.fairness import four_fifths_and_eo
 from nexus.domain.model_card import build_model_card, render_model_card_markdown
 from nexus.domain.models import Decision, DecisionOutcome
 from nexus.domain.monitoring import monitor_scores
 from nexus.domain.scorecard import fit_scorecard
-
-from nexus.adapters.champion_store import ChampionStore
-from nexus.application.promote import evaluate_challenger, promote_if_passed
-from nexus.adapters.config_loader import load_gate_thresholds
 
 
 def make_synthetic(n: int = 3000, seed: int = 42) -> pd.DataFrame:
@@ -190,7 +189,6 @@ def main() -> int:
     card_path.write_text(md, encoding="utf-8")
     print(f"   written → {card_path}")
 
-    import pickle
 
     pkl_path = out / "scorecard_scorecard-v0.1.0.pkl"
     with open(pkl_path, "wb") as f:

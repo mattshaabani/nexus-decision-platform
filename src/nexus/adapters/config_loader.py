@@ -22,10 +22,7 @@ def load_gate_thresholds(
 ) -> dict[str, float]:
     """Merge YAML file over defaults. Missing file → defaults only."""
     thresholds = dict(DEFAULT_GATE_THRESHOLDS)
-    if path is None:
-        path = Path("config/gate_thresholds.yaml")
-    else:
-        path = Path(path)
+    path = Path("config/gate_thresholds.yaml") if path is None else Path(path)
     if path.exists():
         data: dict[str, Any] = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         for key, value in data.items():

@@ -3,23 +3,21 @@
 from __future__ import annotations
 
 import pickle
+import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from nexus import __version__
+from nexus.adapters.champion_store import ChampionStore
+from nexus.adapters.llm_echo import InMemoryCache, build_default_llm
+from nexus.adapters.policy_retriever import MarkdownPolicyRetriever
+from nexus.adapters.sqlite_agent_audit import SqliteAgentAuditStore
 from nexus.adapters.sqlite_decision_store import SqliteDecisionStore
 from nexus.application.scoring import score_application
-from nexus.domain.scorecard.scorecard import Scorecard
-from nexus.adapters.champion_store import ChampionStore
-from nexus.adapters.llm_echo import EchoLLM, InMemoryCache
 from nexus.domain.llm_gateway import LLMMessage, LLMRequest
-from nexus.adapters.policy_retriever import MarkdownPolicyRetriever
-import uuid
-from nexus.adapters.sqlite_agent_audit import SqliteAgentAuditStore
-from nexus.adapters.llm_echo import InMemoryCache, build_default_llm
-
+from nexus.domain.scorecard.scorecard import Scorecard
 
 app = FastAPI(
     title="Nexus Decision Platform",
