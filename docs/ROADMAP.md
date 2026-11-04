@@ -34,10 +34,15 @@
 
 ## Phase 3 – Agentic support layer (subordinate)
 
-- [ ] LLM gateway (cost routing, semantic cache, rate limits)
-- [ ] Policy RAG + evaluation harness
-- [ ] Explanation / dispute / investigation agents (MCP-ready)
-- [ ] Grounding rule enforced (no free-form final decisions)
+- [x] LLM gateway contracts (routing hint, cache key, cost estimate)
+- [x] Echo adapter + in-memory semantic cache (offline-safe)
+- [x] Policy corpus + markdown retriever
+- [x] Retrieval evaluation harness (recall@k)
+- [x] `POST /support/explain` grounded on decision + policy citations
+- [x] Agent turn audit log (prompt hash, tools, citations, cost)
+- [ ] Production LLM adapter (API key via env; still no decision authority)
+- [ ] MCP tool surface for agents (`get_decision`, `get_policy`, `get_model_card`)
+- [ ] Grounding tests: explain path cannot mutate champion / outcomes
 
 ## Phase 4 – FP&A surface + product hardening
 
