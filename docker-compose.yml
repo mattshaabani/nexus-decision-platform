@@ -42,12 +42,14 @@ services:
       mlflow server
       --host 0.0.0.0
       --port 5000
-      --backend-store-uri sqlite:///mlflow/mlflow.db
+      --backend-store-uri sqlite:////mlflow/mlflow.db
       --default-artifact-root /mlflow/artifacts
     ports:
       - "5000:5000"
     volumes:
       - mlflow-data:/mlflow
+    environment:
+      - GIT_PYTHON_REFRESH=quiet
     restart: unless-stopped
 
   demo-seed:
@@ -56,10 +58,13 @@ services:
       context: .
       dockerfile: docker/Dockerfile
     working_dir: /app
+    user: "0:0"   # run seed as root once so volume writes succeed in demo
     volumes:
       - ./:/app
+      - mlflow-data:/mlflow
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - GIT_PYTHON_REFRESH=quiet
     depends_on:
       - mlflow
     command: python scripts/run_investor_demo.py
