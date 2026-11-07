@@ -18,6 +18,7 @@ from nexus.adapters.sqlite_decision_store import SqliteDecisionStore
 from nexus.application.scoring import score_application
 from nexus.domain.llm_gateway import LLMMessage, LLMRequest
 from nexus.domain.scorecard.scorecard import Scorecard
+from nexus.application.fpa_investigate import investigate_variance
 
 app = FastAPI(
     title="Nexus Decision Platform",
@@ -131,6 +132,33 @@ def score(req: ScoreRequest) -> ScoreResponse:
         outcome=decision.outcome.value,
         reason_codes=list(decision.reason_codes),
     )
+
+
+class FPARequest(BaseModel):
+    metric_name: str
+    actual: float
+    plan: float
+    period: str = "current"
+
+
+@app.post("/support/fpa-investigate")
+def fpa_investigate(req: FPARequest) -> dict:
+    result = investigate_variance(
+        metric_name=req.metric_name,
+        actual=req.actual,
+        plan=req.plan,
+        period=req.period,
+        llm=_llm,
+        retriever=_retriever,
+    )
+    return {
+        "summary": result.summary,
+        "citations": result.citations,
+        "model": result.model,
+        "cached": result.cached,
+        "cost_usd": result.cost_usd,
+        "grounding": "fpa-narrative-only",
+    }
 
 
 class ExplainRequest(BaseModel):
