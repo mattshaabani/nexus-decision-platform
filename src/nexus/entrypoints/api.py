@@ -19,11 +19,21 @@ from nexus.application.scoring import score_application
 from nexus.domain.llm_gateway import LLMMessage, LLMRequest
 from nexus.domain.scorecard.scorecard import Scorecard
 from nexus.application.fpa_investigate import investigate_variance
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Nexus Decision Platform",
     description="Governed Decision Intelligence for regulated financial decisions",
     version=__version__,
+)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 SCORECARD_PATH = Path("artifacts/scorecard_scorecard-v0.1.0.pkl")
