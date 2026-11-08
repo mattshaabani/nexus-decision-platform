@@ -156,7 +156,7 @@ def main() -> int:
     thresholds = load_gate_thresholds()
     store = ChampionStore("artifacts/champion.json")
     gate = evaluate_challenger(
-        "scorecard-v0.1.0", metrics, store, thresholds=thresholds)
+        "scorecard-v0.1.0", metrics, store, thresholds=thresholds,\n        artifact_hash=artifact_hash)
     print(f"   gate={gate.status.value.upper()}")
     for m in gate.metrics:
         flag = "OK" if m.passed else "FAIL"
