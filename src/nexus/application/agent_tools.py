@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import Any
 
-from nexus.adapters.champion_store import ChampionStore
-from nexus.adapters.policy_retriever import MarkdownPolicyRetriever
-from nexus.domain.ports import DecisionStorePort
-from nexus.domain.rag import RetrievalHit
+from nexus.domain.ports import ChampionStorePort, DecisionStorePort
+from nexus.domain.rag import PolicyRetrieverPort, RetrievalHit
 
 
 class AgentToolError(Exception):
@@ -21,8 +18,8 @@ class AgentToolbox:
     def __init__(
         self,
         decisions: DecisionStorePort,
-        champion: ChampionStore,
-        retriever: MarkdownPolicyRetriever,
+        champion: ChampionStorePort,
+        retriever: PolicyRetrieverPort,
     ) -> None:
         self._decisions = decisions
         self._champion = champion
