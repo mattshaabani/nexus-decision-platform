@@ -9,6 +9,7 @@ import pandas as pd
 from nexus.domain.models import Decision, DecisionOutcome
 from nexus.domain.ports import DecisionStorePort
 from nexus.domain.scorecard.scorecard import Scorecard
+from nexus.domain.policy import PolicyConfig, apply_policy
 
 
 def score_application(
@@ -17,24 +18,20 @@ def score_application(
     *,
     person_id: str,
     model_version: str,
-    approve_threshold: float = 0.5,
+    ead: float = 10_000.0,
+    policy: PolicyConfig | None = None,
     store: DecisionStorePort | None = None,
 ) -> Decision:
-    """Score one application; optionally persist to audit store."""
     row = pd.Series(features)
     result = scorecard.score_one(row)
-    outcome = (
-        DecisionOutcome.APPROVE
-        if result.probability < approve_threshold
-        else DecisionOutcome.DECLINE
-    )
+    pol = apply_policy(result.probability, ead=ead, config=policy)
     decision = Decision(
         decision_id=str(uuid.uuid4()),
         person_id=person_id,
         model_version=model_version,
         score=result.score,
         probability=result.probability,
-        outcome=outcome,
+        outcome=pol.outcome,
         reason_codes=list(result.reason_codes),
         features=dict(features),
     )
