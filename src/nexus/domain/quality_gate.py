@@ -67,6 +67,23 @@ def evaluate_gate(
             blockers.append(f"Invalid threshold {name}={value!r}; expected finite number")
             set_status(GateStatus.ERROR)
 
+    threshold_ranges = {
+        "gini_floor": (-1.0, 1.0),
+        "gini_uplift_min": (-2.0, 2.0),
+        "brier_max": (0.0, 1.0),
+        "psi_max": (0.0, math.inf),
+        "four_fifths_min": (0.0, 1.0),
+        "eo_gap_max": (0.0, 1.0),
+    }
+    for name, value in threshold_values.items():
+        if _finite(value):
+            lower, upper = threshold_ranges[name]
+            if not lower <= float(value) <= upper:
+                blockers.append(
+                    f"Threshold {name}={value} outside valid range [{lower}, {upper}]"
+                )
+                set_status(GateStatus.ERROR)
+
     missing = sorted(REQUIRED_METRICS - set(metrics))
     if missing:
         blockers.append(f"Missing required metrics: {', '.join(missing)}")
