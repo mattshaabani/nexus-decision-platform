@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import pickle
 import sys
@@ -146,6 +147,14 @@ def main() -> int:
     )
 
     print("6. Quality gate (champion–challenger)")
+    # Serialize the exact model artifact before evaluation and bind promotion to its digest.
+    out = Path("artifacts")
+    out.mkdir(exist_ok=True)
+    pkl_path = out / "scorecard_scorecard-v0.1.0.pkl"
+    artifact_bytes = pickle.dumps(sc)
+    pkl_path.write_bytes(artifact_bytes)
+    artifact_hash = hashlib.sha256(artifact_bytes).hexdigest()
+
     metrics = {
         "gini": ev.gini,
         "brier": ev.brier,
@@ -156,7 +165,12 @@ def main() -> int:
     thresholds = load_gate_thresholds()
     store = ChampionStore("artifacts/champion.json")
     gate = evaluate_challenger(
-        "scorecard-v0.1.0", metrics, store, thresholds=thresholds,\n        artifact_hash=artifact_hash)
+        "scorecard-v0.1.0",
+        metrics,
+        store,
+        thresholds=thresholds,
+        artifact_hash=artifact_hash,
+    )
     print(f"   gate={gate.status.value.upper()}")
     for m in gate.metrics:
         flag = "OK" if m.passed else "FAIL"
@@ -170,6 +184,7 @@ def main() -> int:
         metrics,
         gate,
         store,
+        artifact_hash=artifact_hash,
         extra={"n_oot": len(oot)},
     )
     print(f"   promoted={promoted}  champion_file=artifacts/champion.json")
@@ -190,10 +205,7 @@ def main() -> int:
     print(f"   written → {card_path}")
 
 
-    pkl_path = out / "scorecard_scorecard-v0.1.0.pkl"
-    with open(pkl_path, "wb") as f:
-        pickle.dump(sc, f)
-    print(f"   scorecard pickle → {pkl_path}")
+    print(f"   scorecard artifact sha256={artifact_hash} → {pkl_path}")
 
     print("8. Sample reason codes:", sc.score_one(oot.iloc[0]).reason_codes)
     print("8b. Audit log (sample 20 OOT decisions)")
