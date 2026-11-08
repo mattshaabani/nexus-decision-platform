@@ -84,3 +84,11 @@ def test_gate_result_binds_artifact_and_metric_fingerprint():
     )
     assert result.candidate_artifact_hash == "sha256:abc"
     assert result.metrics_fingerprint
+
+
+def test_threshold_out_of_range_error():
+    result = evaluate_gate(
+        "v", _good_metrics(), thresholds={"four_fifths_min": 1.5}, is_first_model=True
+    )
+    assert result.status == GateStatus.ERROR
+    assert any("threshold" in blocker.lower() for blocker in result.blockers)
