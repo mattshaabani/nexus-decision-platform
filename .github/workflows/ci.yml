@@ -35,4 +35,4 @@ jobs:
         run: pytest -q
 
       - name: Quality gate (demo metrics)
-        run: python scripts/quality_gate.py --first-model
+        run: python scripts/quality_gate.py --demo --first-model
