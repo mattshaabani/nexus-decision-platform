@@ -80,3 +80,19 @@ button:disabled {
 ul {
   padding-left: 1.25rem;
 }
+
+.nav {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.nav a {
+  color: #0f766e;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav a:hover {
+  text-decoration: underline;
+}

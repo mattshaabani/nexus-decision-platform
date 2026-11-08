@@ -31,9 +31,31 @@ export type Champion = {
   extra?: Record<string, unknown>;
 };
 
+
+export type ExplainResponse = {
+  decision_id: string;
+  outcome: string;
+  explanation: string;
+  citations?: Array<{
+    chunk_id: string;
+    title: string;
+    source: string;
+    score: number;
+  }>;
+  model: string;
+  cached: boolean;
+  cost_usd: number;
+  grounding: string;
+};
+
 export const api = {
   health: () => request<{ status: string; version: string }>("/health"),
   champion: () => request<Champion>("/champion"),
+  explain: (decision_id: string, question: string) =>
+    request<ExplainResponse>("/support/explain", {
+      method: "POST",
+      body: JSON.stringify({ decision_id, question }),
+    }),
   score: (body: {
     person_id: string;
     income: number;
@@ -45,5 +67,5 @@ export const api = {
       body: JSON.stringify(body),
     }),
   decision: (id: string) =>
-    request<Record<string, unknown>>(`/decisions/${id}`),
+    request<Record<string, unknown>>(`/decisions/${encodeURIComponent(id)}`),
 };

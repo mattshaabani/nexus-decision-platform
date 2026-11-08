@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
+import { Link, Route, Routes } from "react-router-dom";
 import { api } from "./api";
-import type { Champion, ScoreResponse } from "./api";
+import type { Champion, ExplainResponse, ScoreResponse } from "./api";
 import "./App.css";
 
 export default function App() {
   const [health, setHealth] = useState<string>("…");
   const [champion, setChampion] = useState<Champion | null>(null);
   const [champError, setChampError] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     person_id: "ui-demo-1",
     income: 55000,
@@ -16,6 +18,14 @@ export default function App() {
   const [result, setResult] = useState<ScoreResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const [lookupId, setLookupId] = useState("");
+  const [lookup, setLookup] = useState<Record<string, unknown> | null>(null);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+
+  const [explainText, setExplainText] = useState<ExplainResponse | null>(null);
+  const [explainError, setExplainError] = useState<string | null>(null);
+  const [explainBusy, setExplainBusy] = useState(false);
 
   useEffect(() => {
     api
@@ -35,6 +45,7 @@ export default function App() {
     try {
       const r = await api.score(form);
       setResult(r);
+      setLookupId(r.decision_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -42,32 +53,30 @@ export default function App() {
     }
   }
 
-  return (
-    <div className="layout">
-      <header>
-        <h1>Nexus Decision Platform</h1>
-        <p className="muted">Governed credit decisioning · API: {health}</p>
-      </header>
+  const championCard = (
+    <section className="card">
+      <h2>Champion</h2>
+      {champError && <p className="error">{champError}</p>}
+      {champion && (
+        <div>
+          <p>
+            <strong>{champion.model_version}</strong>
+          </p>
+          <ul>
+            {Object.entries(champion.metrics).map(([k, v]) => (
+              <li key={k}>
+                <strong>{k}</strong>:{" "}
+                {typeof v === "number" ? v.toFixed(4) : String(v)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
 
-      <section className="card">
-        <h2>Champion</h2>
-        {champError && <p className="error">{champError}</p>}
-        {champion && (
-          <div>
-            <p>
-              <strong>{champion.model_version}</strong>
-            </p>
-            <ul>
-              {Object.entries(champion.metrics).map(([k, v]) => (
-                <li key={k}>
-                  {k}: {typeof v === "number" ? v.toFixed(4) : String(v)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </section>
-
+  const decisioning = (
+    <>
       <section className="card">
         <h2>Score application</h2>
         <form onSubmit={onScore} className="form">
@@ -93,9 +102,7 @@ export default function App() {
             <input
               type="number"
               value={form.age}
-              onChange={(e) =>
-                setForm({ ...form, age: Number(e.target.value) })
-              }
+              onChange={(e) => setForm({ ...form, age: Number(e.target.value) })}
             />
           </label>
           <label>
@@ -127,6 +134,109 @@ export default function App() {
           </div>
         )}
       </section>
+
+      <section className="card">
+        <h2>Lookup decision</h2>
+        <form
+          className="form"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setLookupError(null);
+            setLookup(null);
+            try {
+              const d = await api.decision(lookupId.trim());
+              setLookup(d);
+            } catch (err) {
+              setLookupError(err instanceof Error ? err.message : String(err));
+            }
+          }}
+        >
+          <label>
+            Decision ID
+            <input
+              value={lookupId}
+              onChange={(e) => setLookupId(e.target.value)}
+              placeholder="paste decision_id from score result"
+            />
+          </label>
+          <button type="submit">Lookup</button>
+        </form>
+        {lookupError && <p className="error">{lookupError}</p>}
+        {lookup && (
+          <pre
+            className="result"
+            style={{ whiteSpace: "pre-wrap", fontSize: "0.85rem" }}
+          >
+            {JSON.stringify(lookup, null, 2)}
+          </pre>
+        )}
+      </section>
+
+      <section className="card">
+        <h2>Support explain</h2>
+        <p className="muted">
+          Uses decision id from lookup / score. Never changes the outcome.
+        </p>
+        <button
+          type="button"
+          disabled={explainBusy || !lookupId.trim()}
+          onClick={async () => {
+            setExplainBusy(true);
+            setExplainError(null);
+            setExplainText(null);
+            try {
+              const r = await api.explain(
+                lookupId.trim(),
+                "Why was this decision made?"
+              );
+              setExplainText(r);
+            } catch (err) {
+              setExplainError(err instanceof Error ? err.message : String(err));
+            } finally {
+              setExplainBusy(false);
+            }
+          }}
+        >
+          {explainBusy ? "Explaining…" : "Explain decision"}
+        </button>
+        {explainError && <p className="error">{explainError}</p>}
+        {explainText && (
+          <div className="result">
+            <p>{explainText.explanation}</p>
+            <p className="muted">
+              grounding={explainText.grounding} · model={explainText.model} ·
+              cached={String(explainText.cached)}
+            </p>
+            {explainText.citations && explainText.citations.length > 0 && (
+              <ul>
+                {explainText.citations.map((c) => (
+                  <li key={c.chunk_id}>
+                    {c.title} ({c.chunk_id}) · score {c.score.toFixed(2)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </section>
+    </>
+  );
+
+  return (
+    <div className="layout">
+      <header>
+        <h1>Nexus Decision Platform</h1>
+        <p className="muted">Governed credit decisioning · API: {health}</p>
+        <nav className="nav">
+          <Link to="/">Decisioning</Link>
+          <Link to="/champion">Champion</Link>
+        </nav>
+      </header>
+
+      <Routes>
+        <Route path="/" element={decisioning} />
+        <Route path="/champion" element={championCard} />
+      </Routes>
     </div>
   );
 }
