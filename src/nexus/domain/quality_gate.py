@@ -1,11 +1,16 @@
-"""Pure quality-gate logic – no I/O."""
+"""Pure quality-gate logic – fail-closed."""
 
 from __future__ import annotations
 
+import math
+
 from nexus.domain.models import GateResult, GateStatus, MetricResult
 
-# Default thresholds – override via config in adapters / scripts
-DEFAULT_THRESHOLDS = {
+REQUIRED_METRICS = frozenset(
+    {"gini", "brier", "psi", "four_fifths_ratio", "eo_gap"}
+)
+
+DEFAULT_THRESHOLDS: dict[str, float] = {
     "gini_floor": 0.35,
     "gini_uplift_min": 0.01,
     "brier_max": 0.20,
@@ -15,134 +20,111 @@ DEFAULT_THRESHOLDS = {
 }
 
 
+def _finite(x: float) -> bool:
+    return isinstance(x, (int, float)) and math.isfinite(float(x))
+
+
 def evaluate_gate(
     model_version: str,
     metrics: dict[str, float],
+    *,
     thresholds: dict[str, float] | None = None,
     is_first_model: bool = False,
 ) -> GateResult:
-    """Evaluate a candidate model against governance thresholds.
-
-    Parameters
-    ----------
-    model_version:
-        Identifier of the candidate.
-    metrics:
-        Flat dict of metric name → value. Expected keys include:
-        gini, gini_champion, brier, psi, four_fifths_ratio, eo_gap.
-    thresholds:
-        Override defaults if provided.
-    is_first_model:
-        If True, skip uplift check and only apply absolute floors.
-    """
-    th = {**DEFAULT_THRESHOLDS, **(thresholds or {})}
+    thr = {**DEFAULT_THRESHOLDS, **(thresholds or {})}
     results: list[MetricResult] = []
     blockers: list[str] = []
+    status = GateStatus.PASS
 
-    # --- Gini / ranking ---
+    # Required metrics present + finite
+    missing = sorted(REQUIRED_METRICS - set(metrics))
+    if missing:
+        status = GateStatus.INCOMPLETE
+        blockers.append(f"Missing required metrics: {', '.join(missing)}")
+
+    for name, value in metrics.items():
+        if name in REQUIRED_METRICS or name == "gini_champion":
+            if not _finite(float(value)):
+                status = GateStatus.ERROR
+                blockers.append(f"Non-finite metric: {name}={value!r}")
+
+    def add(name: str, value: float, passed: bool, threshold: float | None = None) -> None:
+        results.append(
+            MetricResult(name=name, value=float(value), passed=passed, threshold=threshold)
+        )
+        if not passed and status == GateStatus.PASS:
+            nonlocal_status_fail()
+
+    # helper to set FAIL only if still PASS
+    def nonlocal_status_fail() -> None:
+        nonlocal status
+        if status == GateStatus.PASS:
+            status = GateStatus.FAIL
+
+    # If ERROR/INCOMPLETE, still compute what we can but do not PASS
     gini = metrics.get("gini")
-    if gini is not None:
-        passed = gini >= th["gini_floor"]
+    if gini is not None and _finite(gini):
+        ok = gini >= thr["gini_floor"]
         results.append(
             MetricResult(
                 name="gini",
-                value=gini,
-                threshold=th["gini_floor"],
-                passed=passed,
-                person_level=True,
+                value=float(gini),
+                passed=ok,
+                threshold=thr["gini_floor"],
             )
         )
-        if not passed:
-            blockers.append(f"Gini {gini:.4f} < floor {th['gini_floor']}")
+        if not ok:
+            blockers.append(f"Gini {gini:.4f} < floor {thr['gini_floor']}")
+            if status == GateStatus.PASS:
+                status = GateStatus.FAIL
 
-        if not is_first_model:
-            gini_champ = metrics.get("gini_champion")
-            if gini_champ is not None:
-                uplift = gini - gini_champ
-                uplift_ok = uplift >= th["gini_uplift_min"]
-                results.append(
-                    MetricResult(
-                        name="gini_uplift",
-                        value=uplift,
-                        threshold=th["gini_uplift_min"],
-                        passed=uplift_ok,
-                        person_level=True,
-                    )
+    if not is_first_model:
+        champ = metrics.get("gini_champion")
+        if gini is not None and champ is not None and _finite(gini) and _finite(champ):
+            uplift = float(gini) - float(champ)
+            ok = uplift >= thr["gini_uplift_min"]
+            results.append(
+                MetricResult(
+                    name="gini_uplift",
+                    value=uplift,
+                    passed=ok,
+                    threshold=thr["gini_uplift_min"],
                 )
-                if not uplift_ok:
-                    blockers.append(
-                        f"Gini uplift {uplift:.4f} < min {th['gini_uplift_min']}"
-                    )
+            )
+            if not ok:
+                blockers.append(
+                    f"Gini uplift {uplift:.4f} < min {thr['gini_uplift_min']}"
+                )
+                if status == GateStatus.PASS:
+                    status = GateStatus.FAIL
+        else:
+            if status == GateStatus.PASS:
+                status = GateStatus.INCOMPLETE
+            blockers.append("Challenger requires gini and gini_champion")
 
-    # --- Calibration ---
-    brier = metrics.get("brier")
-    if brier is not None:
-        passed = brier <= th["brier_max"]
+    checks = [
+        ("brier", "brier_max", True),
+        ("psi", "psi_max", True),
+        ("four_fifths_ratio", "four_fifths_min", False),
+        ("eo_gap", "eo_gap_max", True),
+    ]
+    for metric_name, thr_key, upper_bound in checks:
+        if metric_name not in metrics or not _finite(metrics[metric_name]):
+            continue
+        val = float(metrics[metric_name])
+        limit = thr[thr_key]
+        ok = val <= limit if upper_bound else val >= limit
         results.append(
-            MetricResult(
-                name="brier",
-                value=brier,
-                threshold=th["brier_max"],
-                passed=passed,
-                person_level=True,
-            )
+            MetricResult(name=metric_name, value=val, passed=ok, threshold=limit)
         )
-        if not passed:
-            blockers.append(f"Brier {brier:.4f} > max {th['brier_max']}")
+        if not ok:
+            blockers.append(f"{metric_name}={val:.4f} violates {thr_key}={limit}")
+            if status == GateStatus.PASS:
+                status = GateStatus.FAIL
 
-    # --- Stability ---
-    psi = metrics.get("psi")
-    if psi is not None:
-        passed = psi <= th["psi_max"]
-        results.append(
-            MetricResult(
-                name="psi",
-                value=psi,
-                threshold=th["psi_max"],
-                passed=passed,
-                person_level=False,
-            )
-        )
-        if not passed:
-            blockers.append(f"PSI {psi:.4f} > max {th['psi_max']}")
-
-    # --- Fairness ---
-    four_fifths = metrics.get("four_fifths_ratio")
-    if four_fifths is not None:
-        passed = four_fifths >= th["four_fifths_min"]
-        results.append(
-            MetricResult(
-                name="four_fifths_ratio",
-                value=four_fifths,
-                threshold=th["four_fifths_min"],
-                passed=passed,
-                person_level=True,
-            )
-        )
-        if not passed:
-            blockers.append(
-                f"Four-fifths ratio {four_fifths:.4f} < min {th['four_fifths_min']}"
-            )
-
-    eo_gap = metrics.get("eo_gap")
-    if eo_gap is not None:
-        passed = abs(eo_gap) <= th["eo_gap_max"]
-        results.append(
-            MetricResult(
-                name="eo_gap",
-                value=eo_gap,
-                threshold=th["eo_gap_max"],
-                passed=passed,
-                person_level=True,
-            )
-        )
-        if not passed:
-            blockers.append(f"EO gap {eo_gap:.4f} exceeds ±{th['eo_gap_max']}")
-
-    status = GateStatus.PASS if not blockers else GateStatus.FAIL
     return GateResult(
-        status=status,
         model_version=model_version,
+        status=status,
         metrics=results,
         blockers=blockers,
     )

@@ -25,6 +25,8 @@ class ModelStatus(StrEnum):
 class GateStatus(StrEnum):
     PASS = "pass"
     FAIL = "fail"
+    INCOMPLETE = "incomplete"
+    ERROR = "error"
 
 
 class Decision(BaseModel):

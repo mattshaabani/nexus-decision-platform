@@ -48,6 +48,20 @@ export type ExplainResponse = {
   grounding: string;
 };
 
+export type FPAResponse = {
+  summary: string;
+  citations?: Array<{
+    chunk_id: string;
+    title: string;
+    source: string;
+    score: number;
+  }>;
+  model: string;
+  cached: boolean;
+  cost_usd: number;
+  grounding: string;
+};
+
 export const api = {
   health: () => request<{ status: string; version: string }>("/health"),
   champion: () => request<Champion>("/champion"),
@@ -68,4 +82,15 @@ export const api = {
     }),
   decision: (id: string) =>
     request<Record<string, unknown>>(`/decisions/${encodeURIComponent(id)}`),
+
+  fpaInvestigate: (body: {
+    metric_name: string;
+    actual: number;
+    plan: number;
+    period: string;
+  }) =>
+    request<FPAResponse>("/support/fpa-investigate", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
 };

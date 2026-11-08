@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, Route, Routes } from "react-router-dom";
 import { api } from "./api";
-import type { Champion, ExplainResponse, ScoreResponse } from "./api";
+import type { Champion, ExplainResponse, FPAResponse, ScoreResponse } from "./api";
 import "./App.css";
+
 
 export default function App() {
   const [health, setHealth] = useState<string>("…");
@@ -26,6 +27,16 @@ export default function App() {
   const [explainText, setExplainText] = useState<ExplainResponse | null>(null);
   const [explainError, setExplainError] = useState<string | null>(null);
   const [explainBusy, setExplainBusy] = useState(false);
+
+  const [fpaForm, setFpaForm] = useState({
+    metric_name: "default_rate",
+    actual: 0.042,
+    plan: 0.035,
+    period: "2026-Q3",
+  });
+  const [fpaResult, setFpaResult] = useState<FPAResponse | null>(null);
+  const [fpaError, setFpaError] = useState<string | null>(null);
+  const [fpaBusy, setFpaBusy] = useState(false);
 
   useEffect(() => {
     api
@@ -216,6 +227,80 @@ export default function App() {
                 ))}
               </ul>
             )}
+            <section className="card">
+        <h2>FP&A investigate</h2>
+        <p className="muted">Narrative only — does not book forecasts or change decisions.</p>
+        <form
+          className="form"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setFpaBusy(true);
+            setFpaError(null);
+            setFpaResult(null);
+            try {
+              const r = await api.fpaInvestigate(fpaForm);
+              setFpaResult(r);
+            } catch (err) {
+              setFpaError(err instanceof Error ? err.message : String(err));
+            } finally {
+              setFpaBusy(false);
+            }
+          }}
+        >
+          <label>
+            Metric
+            <input
+              value={fpaForm.metric_name}
+              onChange={(e) =>
+                setFpaForm({ ...fpaForm, metric_name: e.target.value })
+              }
+            />
+          </label>
+          <label>
+            Actual
+            <input
+              type="number"
+              step="0.001"
+              value={fpaForm.actual}
+              onChange={(e) =>
+                setFpaForm({ ...fpaForm, actual: Number(e.target.value) })
+              }
+            />
+          </label>
+          <label>
+            Plan
+            <input
+              type="number"
+              step="0.001"
+              value={fpaForm.plan}
+              onChange={(e) =>
+                setFpaForm({ ...fpaForm, plan: Number(e.target.value) })
+              }
+            />
+          </label>
+          <label>
+            Period
+            <input
+              value={fpaForm.period}
+              onChange={(e) =>
+                setFpaForm({ ...fpaForm, period: e.target.value })
+              }
+            />
+          </label>
+          <button type="submit" disabled={fpaBusy}>
+            {fpaBusy ? "Investigating…" : "Investigate"}
+          </button>
+        </form>
+        {fpaError && <p className="error">{fpaError}</p>}
+        {fpaResult && (
+          <div className="result">
+            <p>{fpaResult.summary}</p>
+            <p className="muted">
+              {fpaResult.grounding} · {fpaResult.model}
+            </p>
+          </div>
+        )}
+      </section>
           </div>
         )}
       </section>
