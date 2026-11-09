@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import tempfile
@@ -54,10 +55,8 @@ class ChampionStore:
                 os.fsync(handle.fileno())
             os.replace(temp_name, self.path)
         except Exception:
-            try:
+            with contextlib.suppress(FileNotFoundError):
                 os.unlink(temp_name)
-            except FileNotFoundError:
-                pass
             raise
 
     def clear(self) -> None:
