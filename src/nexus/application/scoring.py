@@ -34,6 +34,10 @@ def score_application(
         outcome=pol.outcome,
         reason_codes=list(result.reason_codes),
         features=dict(features),
+        lgd=pol.lgd,
+        ead=pol.ead,
+        expected_loss=pol.expected_loss,
+        policy_version=pol.policy_version,
     )
     if store is not None:
         store.save(decision)

@@ -26,18 +26,22 @@ class SqliteDecisionStore:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS decisions (
-                    decision_id   TEXT PRIMARY KEY,
-                    person_id     TEXT NOT NULL,
-                    model_version TEXT NOT NULL,
-                    score         REAL NOT NULL,
-                    probability   REAL NOT NULL,
-                    outcome       TEXT NOT NULL,
-                    reason_codes  TEXT NOT NULL,
-                    features      TEXT NOT NULL,
-                    override      INTEGER NOT NULL DEFAULT 0,
-                    override_by   TEXT,
+                    decision_id     TEXT PRIMARY KEY,
+                    person_id       TEXT NOT NULL,
+                    model_version   TEXT NOT NULL,
+                    score           REAL NOT NULL,
+                    probability     REAL NOT NULL,
+                    outcome         TEXT NOT NULL,
+                    reason_codes    TEXT NOT NULL,
+                    features        TEXT NOT NULL,
+                    lgd             REAL NOT NULL DEFAULT 0.45,
+                    ead             REAL NOT NULL DEFAULT 10000,
+                    expected_loss   REAL NOT NULL DEFAULT 0,
+                    policy_version  TEXT NOT NULL DEFAULT 'policy-v1',
+                    override        INTEGER NOT NULL DEFAULT 0,
+                    override_by     TEXT,
                     override_reason TEXT,
-                    created_at    TEXT NOT NULL
+                    created_at      TEXT NOT NULL
                 )
                 """
             )
@@ -52,9 +56,10 @@ class SqliteDecisionStore:
                 """
                 INSERT OR REPLACE INTO decisions (
                     decision_id, person_id, model_version, score, probability,
-                    outcome, reason_codes, features, override, override_by,
-                    override_reason, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    outcome, reason_codes, features,
+                    lgd, ead, expected_loss, policy_version,
+                    override, override_by, override_reason, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     decision.decision_id,
@@ -65,6 +70,10 @@ class SqliteDecisionStore:
                     decision.outcome.value,
                     json.dumps(list(decision.reason_codes)),
                     json.dumps(decision.features),
+                    decision.lgd,
+                    decision.ead,
+                    decision.expected_loss,
+                    decision.policy_version,
                     1 if decision.override else 0,
                     decision.override_by,
                     decision.override_reason,
@@ -97,6 +106,7 @@ class SqliteDecisionStore:
 
     @staticmethod
     def _row_to_decision(row: sqlite3.Row) -> Decision:
+        keys = row.keys()
         return Decision(
             decision_id=row["decision_id"],
             person_id=row["person_id"],
@@ -106,6 +116,10 @@ class SqliteDecisionStore:
             outcome=DecisionOutcome(row["outcome"]),
             reason_codes=json.loads(row["reason_codes"]),
             features=json.loads(row["features"]),
+            lgd=float(row["lgd"]) if "lgd" in keys else 0.45,
+            ead=float(row["ead"]) if "ead" in keys else 10_000.0,
+            expected_loss=float(row["expected_loss"]) if "expected_loss" in keys else 0.0,
+            policy_version=row["policy_version"] if "policy_version" in keys else "policy-v1",
             override=bool(row["override"]),
             override_by=row["override_by"],
             override_reason=row["override_reason"],

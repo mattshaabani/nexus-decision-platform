@@ -76,6 +76,10 @@ class ScoreResponse(BaseModel):
     probability: float
     outcome: str
     reason_codes: list[str]
+    lgd: float
+    ead: float
+    expected_loss: float
+    policy_version: str
 
 
 @app.get("/health")
@@ -116,6 +120,10 @@ def get_decision(decision_id: str) -> dict:
         "features": decision.features,
         "override": decision.override,
         "created_at": decision.created_at.isoformat(),
+        "lgd": decision.lgd,
+        "ead": decision.ead,
+        "expected_loss": decision.expected_loss,
+        "policy_version": decision.policy_version,
     }
 
 
@@ -141,6 +149,10 @@ def score(req: ScoreRequest) -> ScoreResponse:
         probability=decision.probability,
         outcome=decision.outcome.value,
         reason_codes=list(decision.reason_codes),
+        lgd=decision.lgd,
+        ead=decision.ead,
+        expected_loss=decision.expected_loss,
+        policy_version=decision.policy_version,
     )
 
 

@@ -36,10 +36,14 @@ class Decision(BaseModel):
     person_id: str
     model_version: str
     score: float
-    probability: float
+    probability: float  # PD
     outcome: DecisionOutcome
     reason_codes: list[str] = Field(default_factory=list)
     features: dict[str, Any] = Field(default_factory=dict)
+    lgd: float = 0.45
+    ead: float = 10_000.0
+    expected_loss: float = 0.0
+    policy_version: str = "policy-v1"
     override: bool = False
     override_by: str | None = None
     override_reason: str | None = None
