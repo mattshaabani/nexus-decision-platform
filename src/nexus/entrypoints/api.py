@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from nexus import __version__
@@ -15,11 +16,10 @@ from nexus.adapters.llm_echo import InMemoryCache, build_default_llm
 from nexus.adapters.policy_retriever import MarkdownPolicyRetriever
 from nexus.adapters.sqlite_agent_audit import SqliteAgentAuditStore
 from nexus.adapters.sqlite_decision_store import SqliteDecisionStore
+from nexus.application.fpa_investigate import investigate_variance
 from nexus.application.scoring import score_application
 from nexus.domain.llm_gateway import LLMMessage, LLMRequest
 from nexus.domain.scorecard.scorecard import Scorecard
-from nexus.application.fpa_investigate import investigate_variance
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Nexus Decision Platform",
