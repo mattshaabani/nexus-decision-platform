@@ -14,5 +14,8 @@ def test_investigate_returns_summary():
         llm=EchoLLM(InMemoryCache()),
         retriever=MarkdownPolicyRetriever("data/policy"),
     )
-    assert "does not change the credit decision" in result.summary.lower() or len(result.summary) > 20
+    assert (
+        "does not change the credit decision" in result.summary.lower()
+        or len(result.summary) > 20
+    )
     assert result.cost_usd >= 0

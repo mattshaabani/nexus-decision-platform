@@ -34,5 +34,8 @@ jobs:
       - name: Tests
         run: pytest -q
 
+      - name: Architecture contracts
+        run: lint-imports
+
       - name: Quality gate (demo metrics)
-        run: python scripts/quality_gate.py --first-model
+        run: python scripts/quality_gate.py --demo --first-model

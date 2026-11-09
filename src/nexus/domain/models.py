@@ -64,6 +64,8 @@ class GateResult(BaseModel):
     model_version: str
     metrics: list[MetricResult]
     blockers: list[str] = Field(default_factory=list)
+    candidate_artifact_hash: str | None = None
+    metrics_fingerprint: str | None = None
     generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     @property

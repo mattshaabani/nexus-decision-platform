@@ -6,10 +6,10 @@ import uuid
 
 import pandas as pd
 
-from nexus.domain.models import Decision, DecisionOutcome
+from nexus.domain.models import Decision
+from nexus.domain.policy import PolicyConfig, apply_policy
 from nexus.domain.ports import DecisionStorePort
 from nexus.domain.scorecard.scorecard import Scorecard
-from nexus.domain.policy import PolicyConfig, apply_policy
 
 
 def score_application(

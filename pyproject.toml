@@ -68,6 +68,7 @@ addopts = "-q --cov=nexus --cov-report=term-missing"
 
 [tool.importlinter]
 root_package = "nexus"
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Domain is pure"

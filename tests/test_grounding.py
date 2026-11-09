@@ -7,10 +7,10 @@ import numpy as np
 import pandas as pd
 from fastapi.testclient import TestClient
 
+from nexus.adapters.sqlite_decision_store import SqliteDecisionStore
+from nexus.application.scoring import score_application
 from nexus.domain.scorecard import fit_scorecard
 from nexus.entrypoints.api import app
-from nexus.application.scoring import score_application
-from nexus.adapters.sqlite_decision_store import SqliteDecisionStore
 
 
 def test_explain_does_not_change_champion(tmp_path: Path, monkeypatch):

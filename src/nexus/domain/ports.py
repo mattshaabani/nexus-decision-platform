@@ -10,9 +10,26 @@ from nexus.domain.models import Decision, GateResult, ModelCard
 @runtime_checkable
 class ModelRegistryPort(Protocol):
     def get_champion(self) -> str | None: ...
-    def register_candidate(self, model_version: str, artifact_uri: str, metrics: dict[str, Any]
-                           ) -> None: ...
+    def register_candidate(
+        self, model_version: str, artifact_uri: str, metrics: dict[str, Any]
+    ) -> None: ...
     def promote_to_champion(self, model_version: str) -> None: ...
+
+
+@runtime_checkable
+class ChampionStorePort(Protocol):
+    """Persistence port for the current champion snapshot."""
+
+    def get(self) -> dict[str, Any] | None: ...
+
+    def set(
+        self,
+        model_version: str,
+        metrics: dict[str, float],
+        *,
+        artifact_hash: str,
+        extra: dict[str, Any] | None = None,
+    ) -> None: ...
 
 
 @runtime_checkable
