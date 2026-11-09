@@ -76,7 +76,7 @@ def evaluate_gate(
         "eo_gap_max": (0.0, 1.0),
     }
     for name, value in threshold_values.items():
-        if _finite(value):
+        if name in threshold_ranges and _finite(value):
             lower, upper = threshold_ranges[name]
             if not lower <= float(value) <= upper:
                 blockers.append(
