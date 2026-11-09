@@ -9,7 +9,7 @@ import pytest
 from nexus.adapters.champion_store import ChampionStore
 from nexus.adapters.policy_retriever import MarkdownPolicyRetriever
 from nexus.adapters.sqlite_decision_store import SqliteDecisionStore
-from nexus.application.agent_tools import AgentToolError, AgentToolbox
+from nexus.application.agent_tools import AgentToolbox, AgentToolError
 from nexus.application.scoring import score_application
 from nexus.domain.scorecard import fit_scorecard
 
@@ -35,7 +35,7 @@ def test_tools_read_only(tmp_path: Path):
         store=store,
     )
     champ = ChampionStore(tmp_path / "c.json")
-    champ.set("v1", {"gini": 0.4})
+    champ.set("v1", {"gini": 0.4}, artifact_hash="sha256:test")
     box = AgentToolbox(store, champ, MarkdownPolicyRetriever("data/policy"))
 
     assert box.get_decision(d.decision_id)["outcome"] in {"approve", "decline"}
