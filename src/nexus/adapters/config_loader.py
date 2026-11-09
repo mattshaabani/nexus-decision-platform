@@ -29,3 +29,24 @@ def load_gate_thresholds(
             if key in thresholds:
                 thresholds[key] = float(value)
     return thresholds
+
+
+def load_policy_config(
+    path: str | Path | None = None,
+) -> dict[str, float | str]:
+    """Load lending policy thresholds from YAML."""
+    defaults: dict[str, float | str] = {
+        "policy_version": "policy-v1",
+        "approve_max_pd": 0.08,
+        "refer_max_pd": 0.18,
+        "default_lgd": 0.45,
+    }
+    p = Path("config/policy_v1.yaml") if path is None else Path(path)
+    if not p.exists():
+        return defaults
+    data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    out = dict(defaults)
+    for k, v in data.items():
+        if k in out:
+            out[k] = v if k == "policy_version" else float(v)
+    return out

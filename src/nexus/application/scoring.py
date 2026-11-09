@@ -6,6 +6,7 @@ import uuid
 
 import pandas as pd
 
+from nexus.adapters.config_loader import load_policy_config
 from nexus.domain.models import Decision
 from nexus.domain.policy import PolicyConfig, apply_policy
 from nexus.domain.ports import DecisionStorePort
@@ -20,11 +21,28 @@ def score_application(
     model_version: str,
     ead: float = 10_000.0,
     policy: PolicyConfig | None = None,
+    policy_version: str | None = None,
     store: DecisionStorePort | None = None,
 ) -> Decision:
     row = pd.Series(features)
     result = scorecard.score_one(row)
-    pol = apply_policy(result.probability, ead=ead, config=policy)
+
+    version = policy_version
+    if policy is None:
+        cfg = load_policy_config()
+        policy = PolicyConfig(
+            approve_max_pd=float(cfg["approve_max_pd"]),
+            refer_max_pd=float(cfg["refer_max_pd"]),
+            default_lgd=float(cfg["default_lgd"]),
+        )
+        version = str(cfg["policy_version"])
+
+    pol = apply_policy(
+        result.probability,
+        ead=ead,
+        config=policy,
+        policy_version=version,
+    )
     decision = Decision(
         decision_id=str(uuid.uuid4()),
         person_id=person_id,

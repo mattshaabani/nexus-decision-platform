@@ -36,6 +36,7 @@ def apply_policy(
     *,
     ead: float,
     config: PolicyConfig | None = None,
+    policy_version: str | None = None,
     force_refer: bool = False,
 ) -> PolicyDecision:
     """Map PD (+ optional flags) to APPROVE / REFER / DECLINE and EL."""
@@ -58,4 +59,5 @@ def apply_policy(
         lgd=lgd,
         ead=float(ead),
         expected_loss=el,
+        policy_version=policy_version or "policy-v1",
     )

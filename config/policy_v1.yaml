@@ -1,0 +1,4 @@
+policy_version: policy-v1
+approve_max_pd: 0.08
+refer_max_pd: 0.18
+default_lgd: 0.45
