@@ -27,7 +27,7 @@ dependencies = [
     "typer>=0.12",
     "rich>=13.7",
     "pyyaml>=6.0",
-    "openai>=1.40",
+    "openai>=1.40,
 ]
 
 [project.optional-dependencies]
@@ -68,6 +68,7 @@ addopts = "-q --cov=nexus --cov-report=term-missing"
 
 [tool.importlinter]
 root_package = "nexus"
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Domain is pure"
