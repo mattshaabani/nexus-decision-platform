@@ -4,10 +4,9 @@
 from __future__ import annotations
 
 import json
-import os
+import subprocess
 import sys
 from pathlib import Path
-import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -63,7 +62,7 @@ def main() -> int:
         print("    (no champion file — first model may still be pending uplift)")
 
     print("\n[D] Support explain (grounded, subordinate)")
-    from nexus.adapters.llm_echo import build_default_llm, InMemoryCache
+    from nexus.adapters.llm_echo import InMemoryCache, build_default_llm
     from nexus.adapters.policy_retriever import MarkdownPolicyRetriever
     from nexus.domain.llm_gateway import LLMMessage, LLMRequest
 
