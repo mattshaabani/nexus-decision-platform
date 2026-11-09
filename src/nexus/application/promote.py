@@ -44,13 +44,17 @@ def evaluate_challenger(
 
     metrics_with_champ = dict(metrics)
     metrics_with_champ["gini_champion"] = float(champion_metrics["gini"])
-    return evaluate_gate(
+    result = evaluate_gate(
         model_version,
         metrics_with_champ,
         thresholds=thresholds,
         is_first_model=False,
         artifact_hash=artifact_hash,
     )
+    # Promotion validates the original candidate payload; champion Gini is
+    # evaluation context, not part of the candidate artifact's metric snapshot.
+    result.metrics_fingerprint = metrics_fingerprint(metrics)
+    return result
 
 
 def promote_if_passed(
